@@ -1,0 +1,266 @@
+// --- Supabase Setup ---
+const SUPABASE_URL = 'YOUR_SUPABASE_URL'; // Replace with your Supabase API URL
+const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY'; // Replace with your Supabase anon key
+
+const { createClient } = supabase;
+const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// --- DOM Element Selection (same as before) ---
+const categorySelection = document.getElementById('category-selection');
+const questionContainer = document.getElementById('question-container');
+const questionElement = document.getElementById('question');
+const optionsContainer = document.getElementById('options-container');
+const resultContainer = document.getElementById('result-container');
+const resultMessage = document.getElementById('result-message');
+const scoreDisplay = document.getElementById('score');
+const restartButton = document.getElementById('restart-button');
+const feedbackContainer = document.getElementById('feedback-container');
+const categoryButtons = document.querySelectorAll('.category-buttons button');
+
+// Authentication elements
+const signupSection = document.getElementById('signup-section');
+const loginSection = document.getElementById('login-section');
+const logoutSection = document.getElementById('logout-section');
+const signupForm = document.getElementById('signup-form');
+const loginForm = document.getElementById('login-form');
+const signupLink = document.getElementById('signup-link');
+const loginLink = document.getElementById('login-link');
+const logoutButton = document.getElementById('logout-button');
+const userDisplayName = document.getElementById('user-display-name');
+const signupError = document.getElementById('signup-error');
+const loginError = document.getElementById('login-error');
+
+let currentQuestions = [];
+let currentQuestionIndex = 0;
+let score = 0;
+let isLoggedIn = false;
+let loggedInUser = null;
+
+// Sample question data (replace with your actual data)
+const questionsByCategory = {
+    general: [/* ... */],
+    bangla: [/* ... */],
+    english: [/* ... */],
+    math: [/* ... */],
+    science: [/* ... */],
+    social_science: [/* ... */]
+};
+
+// --- Authentication Functions using Supabase ---
+
+async function signupUser(username, email, password) {
+    const { data, error } = await supabaseClient.auth.signUp({
+        email: email,
+        password: password,
+        options: {
+            data: {
+                username: username,
+            },
+        },
+    });
+
+    if (error) {
+        signupError.textContent = error.message || 'সাইন আপ ব্যর্থ হয়েছে।';
+        console.error('Signup error:', error);
+    } else {
+        console.log('Signup successful:', data);
+        // Optionally, automatically log the user in after signup
+        await loginUser(email, password);
+    }
+}
+
+async function loginUser(identifier, password) {
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email: identifier, // Assuming email is used for login
+        password: password,
+    });
+
+    if (error) {
+        loginError.textContent = error.message || 'লগইন ব্যর্থ হয়েছে।';
+        console.error('Login error:', error);
+    } else {
+        console.log('Login successful:', data);
+        isLoggedIn = true;
+        loggedInUser = data.user;
+        updateAuthUI();
+        startGameFlow();
+    }
+}
+
+async function logoutUser() {
+    const { error } = await supabaseClient.auth.signOut();
+    if (error) {
+        console.error('Logout error:', error);
+    } else {
+        isLoggedIn = false;
+        loggedInUser = null;
+        updateAuthUI();
+        showAuthSection();
+    }
+}
+
+function updateAuthUI() {
+    if (isLoggedIn) {
+        signupSection.style.display = 'none';
+        loginSection.style.display = 'none';
+        logoutSection.style.display = 'block';
+        userDisplayName.textContent = loggedInUser.user_metadata?.username || loggedInUser.email;
+        gameContainer.style.display = 'block';
+    } else {
+        signupSection.style.display = 'block';
+        loginSection.style.display = 'none';
+        logoutSection.style.display = 'none';
+        gameContainer.style.display = 'none';
+    }
+}
+
+function showLoginSection() {
+    signupSection.style.display = 'none';
+    loginSection.style.display = 'block';
+}
+
+function showSignupSection() {
+    loginSection.style.display = 'none';
+    signupSection.style.display = 'block';
+}
+
+// --- Game Logic ---
+
+function loadQuestion() {
+    if (currentQuestionIndex < currentQuestions.length) {
+        const currentQuestion = currentQuestions[currentQuestionIndex];
+        questionElement.textContent = currentQuestion.question;
+        optionsContainer.innerHTML = '';
+
+        currentQuestion.options.forEach((option, index) => {
+            const button = document.createElement('button');
+            button.classList.add('option');
+            button.textContent = option;
+            button.dataset.index = index;
+            button.addEventListener('click', checkAnswer);
+            optionsContainer.appendChild(button);
+        });
+    } else {
+        showResult();
+    }
+}
+
+function checkAnswer(event) {
+    const selectedOptionIndex = parseInt(event.target.dataset.index);
+    const currentQuestion = currentQuestions[currentQuestionIndex];
+
+    // Disable all options after an answer is selected
+    const options = optionsContainer.querySelectorAll('.option');
+    options.forEach(option => option.disabled = true);
+
+    if (selectedOptionIndex === currentQuestion.correctAnswer) {
+        score++;
+        feedbackContainer.textContent = "সঠিক!";
+        event.target.classList.add('correct');
+    } else {
+        feedbackContainer.textContent = `ভুল! সঠিক উত্তর ছিল: ${currentQuestion.options[currentQuestion.correctAnswer]}`;
+        event.target.classList.add('incorrect');
+        options[currentQuestion.correctAnswer].classList.add('correct'); // Highlight the correct answer
+    }
+
+    // Move to the next question after a delay
+    setTimeout(() => {
+        currentQuestionIndex++;
+        feedbackContainer.textContent = ""; // Clear feedback
+        loadQuestion();
+    }, 1500);
+}
+
+function showResult() {
+    questionContainer.style.display = 'none';
+    resultContainer.style.display = 'block';
+    resultMessage.textContent = "খেলা শেষ!";
+    scoreDisplay.textContent = score;
+    // Optionally save the score to the database
+    if (isLoggedIn && loggedInUser) {
+        saveScore(loggedInUser.id, score);
+    }
+}
+
+async function saveScore(userId, finalScore) {
+    // Assuming you have a 'scores' table with 'user_id' and 'score' columns
+    const { data, error } = await supabaseClient
+        .from('scores')
+        .insert([
+            { user_id: userId, score: finalScore },
+        ]);
+
+    if (error) {
+        console.error('Error saving score:', error);
+    } else {
+        console.log('Score saved:', data);
+    }
+}
+
+function startGameFlow() {
+    categorySelection.style.display = 'block'; // Show category selection after login
+    questionContainer.style.display = 'none';
+    resultContainer.style.display = 'none';
+}
+
+function startGame(selectedCategory) {
+    currentQuestions = questionsByCategory[selectedCategory];
+    currentQuestionIndex = 0;
+    score = 0;
+    categorySelection.style.display = 'none';
+    questionContainer.style.display = 'block';
+    resultContainer.style.display = 'none';
+    loadQuestion();
+}
+
+function restartGame() {
+    categorySelection.style.display = 'block';
+    questionContainer.style.display = 'none';
+    resultContainer.style.display = 'none';
+}
+
+// --- Event Listeners ---
+
+signupForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = signupForm.signup_username.value;
+    const email = signupForm.signup_email.value;
+    const password = signupForm.signup_password.value;
+    await signupUser(username, email, password);
+});
+
+loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const identifier = loginForm.login_username.value; // Assuming email login
+    const password = loginForm.login_password.value;
+    await loginUser(identifier, password);
+});
+
+logoutButton.addEventListener('click', logoutUser);
+signupLink.addEventListener('click', showSignupSection);
+loginLink.addEventListener('click', showLoginSection);
+
+categoryButtons.forEach(button => {
+    button.addEventListener('click', function() {
+        const category = this.dataset.category;
+        startGame(category);
+    });
+});
+
+restartButton.addEventListener('click', restartGame);
+
+// --- Initial Check for Existing Session ---
+async function checkSession() {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+
+    if (session) {
+        isLoggedIn = true;
+        loggedInUser = session.user;
+        updateAuthUI();
+        startGameFlow();
+    } else {
+        updateAuthUI(); // Show login/signup
+    }
+}
+
+checkSession();
