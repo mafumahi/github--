@@ -1,1 +1,77 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>জানতে হলে পড়তে হবে</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div id="signup-section">
+            <h2>সাইন আপ</h2>
+            <form id="signup-form">
+                <input type="text" id="signup-username" placeholder="ব্যবহারকারীর নাম" required>
+                <input type="email" id="signup-email" placeholder="ইমেইল" required>
+                <input type="password" id="signup-password" placeholder="পাসওয়ার্ড" required>
+                <button type="submit">সাইন আপ করুন</button>
+            </form>
+            <p>ইতিমধ্যেই অ্যাকাউন্ট আছে? <a href="#" id="login-link">লগইন করুন</a></p>
+            <div id="signup-error" class="error-message"></div>
+        </div>
+
+        <div id="login-section" style="display: none;">
+            <h2>লগইন</h2>
+            <form id="login-form">
+                <input type="text" id="login-username" placeholder="ব্যবহারকারীর নাম বা ইমেইল" required>
+                <input type="password" id="login-password" placeholder="পাসওয়ার্ড" required>
+                <button type="submit">লগইন করুন</button>
+            </form>
+            <p>অ্যাকাউন্ট নেই? <a href="#" id="signup-link">সাইন আপ করুন</a></p>
+            <div id="login-error" class="error-message"></div>
+        </div>
+
+        <div id="logout-section" style="display: none;">
+            <p>স্বাগতম, <span id="user-display-name"></span>!</p>
+            <button id="logout-button">লগ আউট</button>
+        </div>
+    </div>
+
+    <div class="game-container" style="display: none;">
+        <h1>জানতে হলে পড়তে হবে</h1>
+
+        <div id="category-selection">
+            <h2>বিষয় নির্বাচন করুন</h2>
+            <div class="category-buttons">
+                <button data-category="general">সাধারণ জ্ঞান</button>
+                <button data-category="bangla">বাংলা</button>
+                <button data-category="english">ইংরেজি</button>
+                <button data-category="math">গণিত</button>
+                <button data-category="science">বিজ্ঞান</button>
+                <button data-category="social_science">সামাজিক বিজ্ঞান</button>
+            </div>
+        </div>
+
+        <div id="question-container" style="display: none;">
+            <h2 id="question">প্রশ্ন এখানে থাকবে...</h2>
+            <div id="options-container">
+                <button class="option" data-index="0">অপশন ১</button>
+                <button class="option" data-index="1">অপশন ২</button>
+                <button class="option" data-index="2">অপশন ৩</button>
+                <button class="option" data-index="3">অপশন ৪</button>
+            </div>
+        </div>
+
+        <div id="result-container" style="display: none;">
+            <h2 id="result-message"></h2>
+            <p>আপনার স্কোর: <span id="score">0</span></p>
+            <button id="restart-button">আবার খেলুন</button>
+        </div>
+
+        <div id="feedback-container"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+  </html>
 
